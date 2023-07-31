@@ -1,7 +1,7 @@
 """Flask app for Cupcakes"""
 import os
 from flask import Flask, request, jsonify
-from models import db, connect_db, Cupcake
+from models import db, connect_db, Cupcake, DEFAULT_CUPCAKE_URL
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
@@ -34,17 +34,15 @@ def get_cupcake(cupcake_id):
 
 @app.post("/api/cupcakes")
 def create_cupcake():
-    """Create a cupcake with image_url, size, rating, flavor
-        size, rating, flavor is required while image_url is optional
+    """ Create a cupcake with image_url, size, rating, flavor
+        Expects JSON body like: {cupcake: {id, flavor, size, rating, image_url}}
+        Size, Flavor, Rating are required. Image URL is optional.
         Return JSON like: {cupcake: {id, flavor, size, rating, image_url}}
     """
 
     size = request.json["size"]
     rating = request.json["rating"]
-    image_url = (request.json.get("image_url")
-        if request.json.get("image_url")
-        else ""
-        )
+    image_url = request.json.get("image_url") or None
     flavor = request.json["flavor"]
 
     new_cupcake = Cupcake(
@@ -68,13 +66,31 @@ def update_cupcake(cupcake_id):
     {cupcake: {id, flavor, size, rating, image_url}}.
     """
     cupcake = Cupcake.query.get_or_404(cupcake_id)
-    for (key,value) in request.json:
-        cupcake[key] = value
+
+    for key in request.json.keys():
+        if key == "image_url" and not request.json[key]:
+            # assumption: since we have a default image, there MUST be one
+            setattr(cupcake, key, DEFAULT_CUPCAKE_URL)
+        elif hasattr(cupcake, key) and not key == 'id':
+            setattr(cupcake, key, request.json[key])
 
     db.session.commit()
 
     serialized = cupcake.serialize()
     return jsonify(cupcake=serialized)
+
+@app.delete("/api/cupcakes/<int:cupcake_id>")
+def delete_cupcake(cupcake_id):
+    """
+    Deletes the specified cupcake
+    Responds with JSON like {deleted: [cupcake-id]}
+    """
+
+    cupcake = Cupcake.query.get_or_404(cupcake_id)
+    db.session.delete(cupcake)
+    db.session.commit()
+
+    return (jsonify({"deleted": [cupcake_id]}))
 
 
 

@@ -37,6 +37,7 @@ class CupcakeViewsTestCase(TestCase):
         Cupcake.query.delete()
 
         # "**" means "pass this dictionary as individual named params"
+        # Cupcake(flavor=TestFlavor, ...)
         cupcake = Cupcake(**CUPCAKE_DATA)
         db.session.add(cupcake)
         db.session.commit()
@@ -49,6 +50,7 @@ class CupcakeViewsTestCase(TestCase):
         db.session.rollback()
 
     def test_list_cupcakes(self):
+        """ Tests to make sure our cupcake is in the list of cupcakes """
         with app.test_client() as client:
             resp = client.get("/api/cupcakes")
 
@@ -66,6 +68,7 @@ class CupcakeViewsTestCase(TestCase):
             })
 
     def test_get_cupcake(self):
+        """ Tests to make sure our cupcake is available """
         with app.test_client() as client:
             url = f"/api/cupcakes/{self.cupcake_id}"
             resp = client.get(url)
@@ -83,6 +86,7 @@ class CupcakeViewsTestCase(TestCase):
             })
 
     def test_create_cupcake(self):
+        """ Tests to make sure the cupcake we created is returned """
         with app.test_client() as client:
             url = "/api/cupcakes"
             resp = client.post(url, json=CUPCAKE_DATA_2)
@@ -105,3 +109,39 @@ class CupcakeViewsTestCase(TestCase):
             })
 
             self.assertEqual(Cupcake.query.count(), 2)
+
+    def test_patch_cupcake(self):
+        """ Tests to make sure the cupcake is updated with only our change """
+        with app.test_client() as client:
+            url = f"/api/cupcakes/{self.cupcake_id}"
+            resp = client.patch(url, json={"flavor": "red velvet"})
+
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json
+            self.assertEqual(data, {
+                "cupcake": {
+                    "id": self.cupcake_id,
+                    "flavor": "red velvet",
+                    "size": "TestSize",
+                    "rating": 5,
+                    "image_url": "http://test.com/cupcake.jpg"
+                }
+            })
+
+            self.assertEqual(Cupcake.query.count(), 1)
+
+    def test_delete_cupcake(self):
+        """ Tests to make sure the cupcake is deleted """
+        with app.test_client() as client:
+            url = f"/api/cupcakes/{self.cupcake_id}"
+            resp = client.delete(url)
+
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json
+            self.assertEqual(data, {"deleted": [self.cupcake_id]})
+
+            #TODO: Perform a query count to confirm there are 0
+            # You might also considering checking before as well
+            # Helps account for someone making changes in other tests
+
+
