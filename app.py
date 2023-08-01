@@ -1,6 +1,6 @@
 """Flask app for Cupcakes"""
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, redirect
 from models import db, connect_db, Cupcake, DEFAULT_CUPCAKE_URL
 
 app = Flask(__name__)
@@ -93,4 +93,8 @@ def delete_cupcake(cupcake_id):
     return (jsonify({"deleted": [cupcake_id]}))
 
 
+@app.get("/")
+def display_homepage():
+    """ Display homepage with cupcake creation form and a list of cupcakes"""
 
+    return render_template("homepage.html")
